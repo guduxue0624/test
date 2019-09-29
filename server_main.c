@@ -180,7 +180,7 @@ void server_thread_fun(void *arge)
 			else if(events[j].events & EPOLLIN)
 			{		
 				memset(wss->buf, 0, sizeof(wss->buf));
-				ret = wss->callBack(events[j].data.fd , wss->buf , sizeof(wss->buf));
+				ret = wss->callBack(events[j].data.fd , wss->buf , sizeof(wss->buf));     //调用回调函数
 				if(ret <= 0)		//----------ret<=0时检查异常, 决定是否主动解除连接----------
 				{
 				    if(errno == EAGAIN || errno == EINTR)

@@ -239,7 +239,7 @@ int server_callBack(int fd, char *buf, unsigned int bufLen)
 }
 
 
-int main(void)
+int server_start(void *callback)
 {
     int exitFlag;
     int i, client_fd;
@@ -250,7 +250,7 @@ int main(void)
     memset(&wss, 0, sizeof(wss));
 
     wss.port = 8000;
-    wss.callBack = &server_callBack; // 响应客户端时, 需要干嘛?
+    wss.callBack = callback; // 响应客户端时, 需要干嘛?
     
     //===== 开辟线程, 管理服务器 =====
     if(pthread_create(&sever_thread_id, NULL, (void*)&server_thread_fun, (void *)(&wss)) != 0)
@@ -286,8 +286,11 @@ int main(void)
 }
 
 
-
-
+int main(int argc, char const *argv[])
+{
+    server_start((void *)&server_callBack);
+    return 0;
+}
 
 
 

@@ -15,12 +15,7 @@ int main(void)
     int ret, timeCount = 0;
     int fd;
     char buff[10240];
-    int pid;
-    //
-    pid = getpid();
-    printf("\r\n========== client(%d) start ! ==========\r\n\r\n", pid);
-    //
-    netCheck_getIP("eth0", ip);
+
     strncpy(ip,"192.168.31.61",strlen("192.168.31.61"));
     if((fd = webSocket_clientLinkToServer(ip, port, "/null")) <= 0)
     {
@@ -30,8 +25,23 @@ int main(void)
     webSocket_delayms(100);
     //
     memset(buff, 0, sizeof(buff));
-    sprintf(buff, "Say hi~ from client(%d)", pid);
-    webSocket_send(fd, buff, strlen(buff), true, WDT_TXTDATA);
+    char *word = "Hi~ World";
+    int recv_len = strlen(word);
+
+    buff[0] = 2;
+    buff[1] = (recv_len >> 24) & 0xff;
+    buff[2] = (recv_len >> 16) & 0xff;
+    buff[3] = (recv_len >>  8) & 0xff;
+    buff[4] = (recv_len) & 0xff;
+    strncpy(buff+5,word,recv_len); 
+
+    webSocket_send(fd, buff, strlen(buff), true, WDT_BINDATA);
+    int is_file_send = 0;
+    FILE *file = fopen("abc.pcm","r");
+    if (file == NULL){
+        is_file_send = 1;
+    }
+    
     //
     while(1)
     {
@@ -41,24 +51,33 @@ int main(void)
         if(ret > 0)
         {
             //===== 与服务器的应答 =====
-            printf("client(%d) recv : %s\r\n", pid, buff);
-            //
-            if(strstr(buff, "Hi~") != NULL)
-            {
-                memset(buff, 0, sizeof(buff));
-                sprintf(buff, "I am client(%d)", pid);
-                ret = webSocket_send(fd, buff, strlen(buff), true, WDT_TXTDATA);
+            char header = buff[0];
+            int len;
+            memcpy(&len,buff+1,4);
+            char *data = buff + 5;
+            if (header == 2){
+                printf("the data is %s\n",data);
             }
-            else
-                ;
-            // ......
-            // ...
             
-            // send返回异常, 连接已断开
-            if(ret <= 0)
-            {
-                close(fd);
-                break;
+            memset(buff,0,strlen(buff));
+            if (!feof(file) && is_file_send == 0){
+                char data[512] = {0};
+                ret = fread(data,128,1,file);
+                buff[0] = 2;
+                buff[1] = (ret >> 24) & 0xff;
+                buff[2] = (ret >> 16) & 0xff;
+                buff[3] = (ret >>  8) & 0xff;
+                buff[4] = (ret) & 0xff;
+                strncpy(buff+5,data,ret); 
+                ret = webSocket_send(fd, buff, strlen(buff), true, WDT_TXTDATA);
+                if (feof(file)){
+                    is_file_send = 1;
+                }
+                if(ret <= 0){
+                    close(fd);     // send返回异常, 连接已断开
+                    break;
+                }
+
             }
         }
         else    // 检查错误, 是否连接已断开
